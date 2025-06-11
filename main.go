@@ -45,8 +45,8 @@ func getShiftForwardBy(shiftBy rune, letter rune) string {
 	if shiftBy <= diffToEdge {
 		return string(letter + shiftBy)
 	} else if shiftBy > diffToEdge && shiftBy <= (FULLRANGE_LENGTH+diffToEdge) {
-		remainder := shiftBy - diffToEdge - 1
-		return string(min + remainder)
+		remainder := shiftBy - diffToEdge
+		return string(min + remainder - 1)
 	} else {
 		withoutMinimal := shiftBy - diffToEdge - 1
 		remainder := withoutMinimal % FULLRANGE_LENGTH
