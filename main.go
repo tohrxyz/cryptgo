@@ -25,67 +25,6 @@ func isLowercase(input rune) (bool, error) {
 	}
 }
 
-func getShiftedPos(input rune, shiftAsNum rune, isLowercase bool) rune {
-	var min, max rune
-	if isLowercase {
-		min = LOWERCASE_MIN
-		max = LOWERCASE_MAX
-	} else {
-		min = UPPERCASE_MIN
-		max = UPPERCASE_MAX
-	}
-
-	rangeVals := max - min + 1
-
-	minimalDifference := max - input
-
-	if shiftAsNum <= minimalDifference {
-		return input + shiftAsNum
-	} else if shiftAsNum <= (minimalDifference + rangeVals) {
-		diff := shiftAsNum - minimalDifference
-		return min + diff
-	} else {
-		remainder := shiftAsNum % rangeVals
-		left := remainder - minimalDifference
-
-		if left == 0 {
-			return max
-		} else if left > 0 {
-			return min + left - 1 // -1, because going from max -> min counts as 1 shift
-		} else {
-			return input + remainder
-		}
-	}
-}
-
-func getShiftedChar(shiftN int, input rune) string {
-	shiftNAsNum := rune(shiftN)
-
-	isLowercase, err := isLowercase(input)
-	if err != nil {
-		panic(err)
-	}
-
-	result := getShiftedPos(input, shiftNAsNum, isLowercase)
-	return string(result)
-}
-
-func shiftWholeSentence(inputString string, shiftN int) string {
-	splitBySpace := strings.Fields(inputString)
-	var encrypted string
-
-	for j := range splitBySpace {
-		part := []rune(splitBySpace[j])
-
-		for i := range part {
-			shifted := getShiftedChar(shiftN, part[i])
-			encrypted = encrypted + shifted
-		}
-		encrypted = encrypted + " "
-	}
-	return encrypted
-}
-
 func getEdgesByLetter(input rune) (rune, rune) {
 	isLowercase, err := isLowercase(input)
 	if err != nil {
@@ -99,6 +38,22 @@ func getEdgesByLetter(input rune) (rune, rune) {
 	}
 }
 
+func getShiftForwardBy(shiftBy rune, letter rune) string {
+	min, max := getEdgesByLetter(letter)
+	diffToEdge := max - letter
+
+	if shiftBy <= diffToEdge {
+		return string(letter + shiftBy)
+	} else if shiftBy > diffToEdge && shiftBy <= (FULLRANGE_LENGTH+diffToEdge) {
+		remainder := shiftBy - diffToEdge - 1
+		return string(min + remainder)
+	} else {
+		withoutMinimal := shiftBy - diffToEdge - 1
+		remainder := withoutMinimal % FULLRANGE_LENGTH
+		return string(min + remainder)
+	}
+}
+
 func getShiftBackwardsBy(shiftBy rune, letter rune) string {
 	min, max := getEdgesByLetter(letter)
 	diffToEdge := letter - min
@@ -107,7 +62,7 @@ func getShiftBackwardsBy(shiftBy rune, letter rune) string {
 		return string(letter - shiftBy)
 	} else if shiftBy > diffToEdge && shiftBy <= (FULLRANGE_LENGTH+diffToEdge) {
 		remainder := shiftBy - diffToEdge
-		return string(max - remainder)
+		return string(max - remainder + 1)
 	} else {
 		withoutMinimal := shiftBy - diffToEdge - 1
 		remainder := withoutMinimal % FULLRANGE_LENGTH
@@ -115,21 +70,31 @@ func getShiftBackwardsBy(shiftBy rune, letter rune) string {
 	}
 }
 
-func decrypt(input string, shiftN int) string {
-	shiftBy := rune(shiftN)
+func cipher(input string, shiftN int, isEncrypt bool) string {
+	var shiftBy rune
+	if shiftN > int(UPPERCASE_MAX) {
+		shiftBy = rune(shiftN % int(FULLRANGE_LENGTH))
+	} else {
+		shiftBy = rune(shiftN)
+	}
 	splitBySpace := strings.Fields(input)
-	var decrypted string
+	var result string
 
 	for i := range splitBySpace {
 		part := []rune(splitBySpace[i])
 
 		for k := range part {
-			shiftedBackwardsChar := getShiftBackwardsBy(shiftBy, part[k])
-			decrypted = decrypted + shiftedBackwardsChar
+			var shiftedChar string
+			if isEncrypt {
+				shiftedChar = getShiftForwardBy(shiftBy, part[k])
+			} else {
+				shiftedChar = getShiftBackwardsBy(shiftBy, part[k])
+			}
+			result = result + shiftedChar
 		}
-		decrypted = decrypted + " "
+		result = result + " "
 	}
-	return decrypted
+	return result
 }
 
 func main() {
@@ -149,11 +114,11 @@ func main() {
 
 	fmt.Println()
 
-	encrypted := shiftWholeSentence(input, shiftN)
+	encrypted := cipher(input, shiftN, true)
 	fmt.Printf("Encrypted: %s\n", encrypted)
 
 	fmt.Println()
 
-	decrypted := decrypt(encrypted, shiftN)
+	decrypted := cipher(encrypted, shiftN, false)
 	fmt.Printf("Decrypted: %s\n", decrypted)
 }
